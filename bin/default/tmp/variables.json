@@ -1,0 +1,1 @@
+[{"name":"variableTypeDemo","description":"Returns '1' as a String","allowedAgentTargets":["WINDOWS"],"minimumControlRoomVersion":"8750","minimumBotAgentVersion":"20.11","mainClass":"com.automationanywhere.botcommand.samples.variable.VariableTypeDemoVariable","type":"STRING","returns":[{"type":"UNDEFINED","subtype":"ANY"}]}]

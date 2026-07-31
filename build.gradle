@@ -1,0 +1,126 @@
+buildscript {
+	repositories {
+		gradlePluginPortal()
+		flatDir {
+			dirs 'libs'
+		}
+		dependencies {
+			classpath name:'package-compileonly-sdk', version: '1.7.0'
+			classpath "gradle.plugin.com.github.johnrengelman:shadow:7.1.1"
+		}
+	}
+}
+
+plugins {
+	id 'java'
+}
+
+configure(allprojects){
+
+	apply plugin: 'com.github.johnrengelman.shadow'
+	apply plugin: "com.automationanywhere.command-codegen"
+
+	ext {
+		groupName = 'com.automationanywhere'
+		jnaVersion = '5.3.1'
+		version '2.11.0'
+	}
+	group "$groupName"
+
+	// SDK 1.7.0 코드젠(BotCommandAnnotationProcessor)은 JDK 21의 AnnotationProxyMaker와
+	// 맞지 않아 multiple_returns()에서 AnnotationTypeMismatch로 죽는다.
+	// sourceCompatibility만 11로 두면 어노테이션 프로세서는 여전히 데몬 JVM(21)에서 돌기 때문에
+	// toolchain으로 컴파일 JVM 자체를 11로 고정해야 한다.
+	java {
+		toolchain {
+			languageVersion = JavaLanguageVersion.of(11)
+		}
+	}
+
+	compileJava.options.encoding = 'UTF-8'
+	compileTestJava.options.encoding = 'UTF-8'
+
+	sourceSets {
+		main {
+			java {
+				exclude 'com/automationanywhere/botcommand/samples/**'
+			}
+			resources {
+				exclude 'com/automationanywhere/botcommand/samples/**'
+			}
+		}
+	}
+
+	repositories {
+		mavenCentral()
+		flatDir {
+			dirs 'libs'
+		}
+	}
+
+	packageJson{
+		artifactName = project.name
+		group = "$groupName"
+		author = ""
+		generatePackageWithDateTime = true
+	}
+
+	classes.dependsOn commandCodeGen
+
+	// commandCodeGen은 build/resources/main/package.template을 읽어 package.json을 만든 뒤
+	// 템플릿을 지운다. 다음 빌드에서 processResources는 src가 안 바뀌었으니 UP-TO-DATE로
+	// 판정되고, 지워진 템플릿을 복원하지 않는다. 그러면 코드젠이 "template missing" 경고를
+	// 내면서 직전 package.json에 덧쓰는 경로로 빠진다 — 소스에서 액션을 지워도 package.json에
+	// 그대로 남는다. 코드젠 직전에 템플릿을 되돌려서 항상 깨끗한 상태에서 생성하게 한다.
+	commandCodeGen.doFirst {
+		copy {
+			from "$projectDir/src/main/resources/package.template"
+			into "$buildDir/resources/main"
+		}
+	}
+
+	shadowJar {
+		archiveBaseName = project.name
+		classifier = null
+		mergeServiceFiles('META-INF/spring.*')
+		zip64 = true
+		exclude 'META-INF/MANIFEST.MF'
+		exclude 'META-INF/*.SF'
+		exclude 'META-INF/*.DSA'
+		exclude 'META-INF/*.RSA'
+		exclude 'com/automationanywhere/botcommand/samples/**'
+
+		// JEXL과 전이 의존성을 relocate. commons-logging은 Bot Agent와 충돌하는 흔한 원인.
+		relocate 'org.apache.commons.jexl3', 'custompackageexample.shaded.jexl3'
+		relocate 'org.apache.commons.logging', 'custompackageexample.shaded.logging'
+		mergeServiceFiles()
+	}
+
+	test {
+		useJUnitPlatform()
+		testLogging {
+			events 'passed', 'skipped', 'failed'
+			exceptionFormat 'full'
+		}
+	}
+
+	dependencies {
+		annotationProcessor name: 'package-compileonly-sdk', version: '1.7.0'
+
+		compileOnly name: 'package-compileonly-sdk', version: '1.7.0'
+		compileOnly group: "net.java.dev.jna", name: "jna-platform", version: "$jnaVersion"
+
+		implementation name: 'package-runtime-sdk', version: '1.0.0'
+
+		// 표현식 엔진. JexlFeatures로 문법 단위 기능 차단이 가능해서 선택.
+		implementation group: 'org.apache.commons', name: 'commons-jexl3', version: '3.3'
+
+		testImplementation name: 'package-compileonly-sdk', version: '1.7.0'
+		testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.10.2'
+		testRuntimeOnly group: 'org.junit.platform', name: 'junit-platform-launcher'
+
+		// 템플릿에 딸려 있던 activemq-all / commons-dbcp2 / h2 는 제거했다.
+		// samples/ 만 쓰고 있었고 samples는 컴파일에서 제외되므로 JAR만 14MB로 불렸다.
+	}
+
+}

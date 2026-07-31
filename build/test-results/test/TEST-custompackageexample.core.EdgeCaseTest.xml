@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="custompackageexample.core.EdgeCaseTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-07-31T00:06:14" hostname="DESKTOP-96R0MDF" time="0.104">
+  <properties/>
+  <testcase name="toNumberFailurePointsAtTheOffendingRow()" classname="custompackageexample.core.EdgeCaseTest" time="0.09"/>
+  <testcase name="missingCellBindsAsNull()" classname="custompackageexample.core.EdgeCaseTest" time="0.003"/>
+  <testcase name="emptyTableGivesEmptyResultNotAnError()" classname="custompackageexample.core.EdgeCaseTest" time="0.001"/>
+  <testcase name="columnNameWithSpaceCannotBeReferenced()" classname="custompackageexample.core.EdgeCaseTest" time="0.004"/>
+  <testcase name="columnNameIsCaseSensitive()" classname="custompackageexample.core.EdgeCaseTest" time="0.001"/>
+  <testcase name="leadingZeroSurvivesAutoNumeric()" classname="custompackageexample.core.EdgeCaseTest" time="0.001"/>
+  <testcase name="nullCellComparesAsFalse()" classname="custompackageexample.core.EdgeCaseTest" time="0.0"/>
+  <testcase name="nullCellIsFoundByIsEmpty()" classname="custompackageexample.core.EdgeCaseTest" time="0.0"/>
+  <testcase name="thousandSeparatorIsAccepted()" classname="custompackageexample.core.EdgeCaseTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

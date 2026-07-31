@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="custompackageexample.core.FilterTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-07-31T00:06:14" hostname="DESKTOP-96R0MDF" time="0.079">
+  <properties/>
+  <testcase name="syntaxErrorIsReportedBeforeTouchingAnyRow()" classname="custompackageexample.core.FilterTest" time="0.001"/>
+  <testcase name="rowIndexIsAvailableBecauseRowsHaveNoNames()" classname="custompackageexample.core.FilterTest" time="0.0"/>
+  <testcase name="getClassIsRejected()" classname="custompackageexample.core.FilterTest" time="0.013"/>
+  <testcase name="nonBooleanConditionIsRejected()" classname="custompackageexample.core.FilterTest" time="0.006"/>
+  <testcase name="combinesConditionsWithExplicitToNumber()" classname="custompackageexample.core.FilterTest" time="0.001"/>
+  <testcase name="negateGivesRemoveWhereForFree()" classname="custompackageexample.core.FilterTest" time="0.001"/>
+  <testcase name="unknownColumnIsAnErrorNotSilentZeroRows()" classname="custompackageexample.core.FilterTest" time="0.001"/>
+  <testcase name="headerlessTableIsRejectedWithClearMessage()" classname="custompackageexample.core.FilterTest" time="0.003"/>
+  <testcase name="schemaIsPreservedInResult()" classname="custompackageexample.core.FilterTest" time="0.001"/>
+  <testcase name="newInstanceIsRejected()" classname="custompackageexample.core.FilterTest" time="0.001"/>
+  <testcase name="assignmentIsRejected()" classname="custompackageexample.core.FilterTest" time="0.001"/>
+  <testcase name="filtersByStringEquality()" classname="custompackageexample.core.FilterTest" time="0.001"/>
+  <testcase name="autoDetectNumericMakesBareComparisonWork()" classname="custompackageexample.core.FilterTest" time="0.001"/>
+  <testcase name="partiallyNamedColumnsArePermitted()" classname="custompackageexample.core.FilterTest" time="0.001"/>
+  <testcase name="whitelistedFunctionsAreCallable()" classname="custompackageexample.core.FilterTest" time="0.001"/>
+  <testcase name="expressionIsParsedOnceForTenThousandRows()" classname="custompackageexample.core.FilterTest" time="0.043"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
