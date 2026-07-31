@@ -17,11 +17,10 @@ import com.automationanywhere.botcommand.data.model.table.Table;
 import com.automationanywhere.botcommand.exception.BotCommandException;
 
 /**
- * 경계 케이스의 동작을 고정한다.
+ * 경계 조건의 동작을 고정한다.
  *
- * <p>여기 적힌 값들은 "이래야 한다"가 아니라 "실제로 이렇다"를 확인한 결과다.
- * 빈 셀이나 짧은 행 같은 건 Excel에서 흔하게 들어오는데, 동작이 조용히 바뀌면
- * 봇이 틀린 결과를 내면서도 에러를 안 낸다. 그래서 값으로 못 박아 둔다.
+ * <p>빈 셀과 스키마보다 짧은 행은 Excel 입력에서 흔하다. 이 동작이 바뀌면 오류 없이
+ * 결과만 달라지므로 값으로 고정한다.
  */
 class EdgeCaseTest {
 
@@ -42,7 +41,7 @@ class EdgeCaseTest {
         assertEquals(0, names(empty, "Dept == \"IT\"", false).size());
     }
 
-    /** null 셀은 비교에서 false다. 예외가 아니다. 한 칸 비었다고 봇이 멈추면 곤란하다. */
+    /** null 셀은 비교에서 false로 평가된다. 예외가 아니다. */
     @Test
     void nullCellComparesAsFalse() {
         assertEquals(0, names(withNullDept(), "Dept == \"IT\"", false).size());
@@ -53,7 +52,7 @@ class EdgeCaseTest {
         assertEquals(Arrays.asList("Ann"), names(withNullDept(), "isEmpty(Dept)", false));
     }
 
-    /** 스키마보다 셀이 적은 행. 없는 칸은 null로 바인딩되고, 없는 컬럼 취급이 아니다. */
+    /** 스키마보다 셀이 적은 행. 없는 칸은 null로 바인딩된다. 미정의 컬럼과는 다르다. */
     @Test
     void missingCellBindsAsNull() {
         Table shortRow = new Table(
@@ -65,7 +64,7 @@ class EdgeCaseTest {
 
     // ---- 숫자 변환 ----
 
-    /** 숫자가 아닌 셀은 조용히 0이 되지 않는다. 어느 행에서 걸렸는지 메시지에 나와야 한다. */
+    /** 숫자가 아닌 셀은 0으로 대체되지 않는다. 메시지에 행 번호를 포함한다. */
     @Test
     void toNumberFailurePointsAtTheOffendingRow() {
         Table dirty = Tables.of(Arrays.asList("Name", "Salary"),
@@ -82,7 +81,7 @@ class EdgeCaseTest {
         assertEquals(Arrays.asList("Ann"), names(commas, "toNumber(Salary) > 1000", false));
     }
 
-    /** 자동 변환을 켜도 우편번호 01234의 앞 0은 살아 있어야 한다. */
+    /** 자동 변환을 켜도 우편번호 01234의 앞자리 0은 유지된다. */
     @Test
     void leadingZeroSurvivesAutoNumeric() {
         Table zips = Tables.of(Arrays.asList("Name", "Zip"),
@@ -94,17 +93,14 @@ class EdgeCaseTest {
 
     // ---- 컬럼명 ----
 
-    /** 컬럼명은 대소문자를 가린다. Dept를 dept로 쓰면 0건이 아니라 오류다. */
+    /** 컬럼명은 대소문자를 구분한다. 불일치는 0건이 아니라 오류다. */
     @Test
     void columnNameIsCaseSensitive() {
         BotCommandException e = failureOf(Tables.employees(), "dept == \"IT\"");
         assertTrue(e.getMessage().contains("평가 실패"), e.getMessage());
     }
 
-    /**
-     * 공백이 든 컬럼명은 표현식에서 쓸 수 없다. JEXL이 식별자 두 개로 파싱한다.
-     * 문법 오류로 즉시 잡히므로 봇 개발자가 원인을 본다.
-     */
+    /** 공백이 포함된 컬럼명은 표현식에서 쓸 수 없다. JEXL이 식별자 두 개로 파싱한다. */
     @Test
     void columnNameWithSpaceCannotBeReferenced() {
         Table spaced = Tables.of(Arrays.asList("Name", "Job Title"), new String[] {"Ann", "Dev"});

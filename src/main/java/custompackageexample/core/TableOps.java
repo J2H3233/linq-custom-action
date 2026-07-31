@@ -7,9 +7,9 @@ import com.automationanywhere.botcommand.data.model.table.Row;
 import com.automationanywhere.botcommand.data.model.table.Table;
 
 /**
- * 테이블 연산. 순수 Java라서 Control Room 없이 JUnit으로 돈다.
+ * 테이블 연산. 순수 자바이므로 Control Room 없이 JUnit으로 실행된다.
  *
- * <p>Stream을 쓰지 않는 이유: {@code _rowIndex} 주입과 예외 메시지의 행 번호 때문이다.
+ * <p>Stream을 쓰지 않는 것은 {@code _rowIndex} 주입과 오류 메시지의 행 번호 때문이다.
  */
 public final class TableOps {
 
@@ -19,7 +19,7 @@ public final class TableOps {
     /**
      * 조건을 만족하는 행만 남긴다.
      *
-     * @param negate true면 반대로 동작한다. RemoveWhere가 이 한 글자 차이다.
+     * @param negate true이면 조건을 반전한다. RemoveWhere가 이 값만 다르다.
      */
     public static Table filter(Table source, RowEvaluator evaluator, boolean negate) {
         List<Row> rows = source.getRows();
@@ -30,7 +30,7 @@ public final class TableOps {
                 kept.add(row);
             }
         }
-        // 스키마 리스트만 새로 만들고 Schema 객체는 공유한다. 여기서 고치지 않으므로 안전하다.
+        // 스키마 리스트만 새로 만들고 Schema 객체는 공유한다. 이 클래스는 스키마를 수정하지 않는다.
         return new Table(new ArrayList<>(source.getSchema()), kept);
     }
 }

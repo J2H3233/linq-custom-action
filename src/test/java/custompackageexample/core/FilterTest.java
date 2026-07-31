@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import com.automationanywhere.botcommand.data.model.table.Table;
 import com.automationanywhere.botcommand.exception.BotCommandException;
 
-/** where절(filter) 동작과 보안 설정 검증. */
+/** 자유 변수 방식 필터의 동작과 보안 설정 검증. 람다 방식은 {@code QueryTest}가 다룬다. */
 class FilterTest {
 
     private static List<String> filterNames(Table table, String condition) {
@@ -76,7 +76,7 @@ class FilterTest {
 
     // ---- 보안 ----
 
-    /** 표현식은 컴파일 또는 평가 중 어디서든 막히면 된다. 통과만 안 하면 성공. */
+    /** 컴파일과 평가 중 어느 단계에서 차단되는지는 구분하지 않는다. */
     private static void assertBlocked(String condition) {
         BotCommandException e = assertThrows(BotCommandException.class, () -> {
             Table table = Tables.employees();
@@ -88,7 +88,7 @@ class FilterTest {
 
     @Test
     void assignmentIsRejected() {
-        // JEXL에서 =는 대입이다. 막지 않으면 필터가 아니라 전체 행을 통과시키고 에러도 없다.
+        // JEXL에서 =는 대입이다. 차단하지 않으면 오류 없이 전체 행이 통과한다.
         assertBlocked("Dept = \"IT\"");
     }
 
@@ -113,7 +113,7 @@ class FilterTest {
 
     @Test
     void unknownColumnIsAnErrorNotSilentZeroRows() {
-        // strict(true)의 존재 이유. 컬럼명 오타가 조용히 0건이 되면 원인을 못 찾는다.
+        // strict(true)가 없으면 컬럼명 오타가 오류 없이 0건으로 나타난다.
         assertBlocked("Departmnt == \"IT\"");
     }
 

@@ -11,16 +11,19 @@ import com.automationanywhere.commandsdk.annotations.rules.NotEmpty;
 import com.automationanywhere.commandsdk.model.AttributeType;
 import com.automationanywhere.commandsdk.model.DataType;
 
+import custompackageexample.core.Fn;
 import custompackageexample.core.RowEvaluator;
 import custompackageexample.core.TableGuard;
 import custompackageexample.core.TableOps;
 
 /**
- * 조건식으로 테이블 행을 걸러내는 액션 (LINQ의 Where).
+ * 조건식으로 테이블 행을 걸러내는 액션. LINQ {@code Where}에 대응한다.
  *
- * <p>core를 호출하는 얇은 어댑터다. 상속을 쓰지 않는 이유: SDK가 리플렉션으로
- * {@code @Execute}와 파라미터 어노테이션을 스캔하는데 상속 계층에서의 탐색이
- * SDK 버전마다 다르게 동작한다.
+ * <p>컬럼명을 자유 변수로 참조한다. 람다와 체이닝은 {@link QueryTable}이 담당한다.
+ *
+ * <p>core를 호출하는 어댑터다. 상속을 쓰지 않는 것은 SDK가 리플렉션으로
+ * {@code @Execute}와 파라미터 어노테이션을 스캔하는데, 상속 계층 탐색 동작이
+ * SDK 버전마다 다르기 때문이다.
  */
 @BotCommand
 @CommandPkg(
@@ -48,9 +51,10 @@ public class FilterTable {
             @NotEmpty
             String condition,
 
-            // 표현식 입력창 바로 밑에 붙는 설명문. 헤더 누락 함정을 미리 알린다.
+            // 표현식 입력창 아래에 표시되는 설명문.
+            // 줄바꿈을 넣으면 Control Room이 뒤따르는 속성을 렌더링하지 않는다.
             @Idx(index = "3", type = AttributeType.HELP)
-            @Pkg(label = "", description = TableGuard.HEADER_HINT)
+            @Pkg(label = "", description = TableGuard.HEADER_HINT + "  |  " + Fn.FUNCTION_HELP)
             String hint,
 
             @Idx(index = "4", type = AttributeType.CHECKBOX)
@@ -64,7 +68,7 @@ public class FilterTable {
         TableGuard.requireNamedColumns(table);
         TableGuard.requireExpression(condition, "Condition");
 
-        // 파싱은 여기서 1회. 루프 안이 아니다.
+        // 파싱은 1회. 행 루프 밖이다.
         RowEvaluator evaluator = new RowEvaluator(
                 condition, table.getSchema(), Boolean.TRUE.equals(autoDetectNumeric));
 

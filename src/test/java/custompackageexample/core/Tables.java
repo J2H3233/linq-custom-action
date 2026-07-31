@@ -12,10 +12,11 @@ import com.automationanywhere.botcommand.data.model.table.Table;
 import com.automationanywhere.botcore.api.dto.AttributeType;
 
 /**
- * 테스트용 가짜 테이블. Table/Row/Schema는 SDK 클래스지만 Control Room 없이 new로 만들 수 있다.
+ * 테스트용 테이블 생성기. Table / Row / Schema는 SDK 클래스지만 Control Room 없이
+ * 생성할 수 있다.
  *
- * <p>값은 전부 StringValue다. Excel "Get multiple cells"가 실제로 그렇게 주기 때문이고,
- * 그래야 타입 강제 변환 동작을 제대로 검증한다.
+ * <p>값은 모두 StringValue다. Excel "Get multiple cells"의 실제 동작과 같고,
+ * 이 조건에서만 타입 변환 로직이 검증된다.
  */
 final class Tables {
 
@@ -35,7 +36,7 @@ final class Tables {
         return new Table(schema, rowList);
     }
 
-    /** 헤더 없이 읽은 테이블. 컬럼명이 Column1, Column2... 로 자동 생성된 상태. */
+    /** 헤더 없이 읽어 컬럼명이 Column1, Column2... 로 생성된 테이블. */
     static Table withoutHeader(int columnCount, String[]... rows) {
         List<String> names = new ArrayList<>();
         for (int i = 1; i <= columnCount; i++) {
@@ -64,7 +65,7 @@ final class Tables {
                 new String[] {"Eve", "Sales", "4", "5000"});
     }
 
-    /** 특정 컬럼의 값들을 순서대로 뽑는다. 결과 검증용. */
+    /** 지정한 컬럼의 값을 순서대로 반환한다. 결과 검증용. */
     static List<String> column(Table table, String columnName) {
         int index = -1;
         for (int i = 0; i < table.getSchema().size(); i++) {
