@@ -12,7 +12,7 @@ import com.automationanywhere.botcommand.data.model.table.Row;
 import com.automationanywhere.botcommand.exception.BotCommandException;
 
 /**
- * 컴파일된 표현식과 스키마로 행을 평가한다. 자유 변수 방식({@link custompackageexample.command.FilterTable})
+ * 컴파일된 표현식과 스키마로 행을 평가한다. 자유 변수 방식({@link custompackageexample.command.FilterToTable})
  * 전용이며, 람다 방식은 {@link Queryable}이 담당한다.
  *
  * <p>{@link #test}는 Boolean 계약이다. Filter / RemoveWhere / Count / Any가 이를 공유한다.

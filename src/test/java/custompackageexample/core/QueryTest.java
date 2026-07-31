@@ -110,6 +110,169 @@ class QueryTest {
                 Tables.column(query(t, "table.OrderBy(r -> toNumber(r.N))"), "Name"));
     }
 
+    // ---- Take ----
+
+    @Test
+    void takeLimitsRows() {
+        assertEquals(Arrays.asList("Ann", "Bob"), names("table.Take(2)"));
+    }
+
+    @Test
+    void takeBeyondInputSizeReturnsAll() {
+        assertEquals(5, query(Tables.employees(), "table.Take(999)").getRows().size());
+    }
+
+    @Test
+    void takeZeroReturnsNothing() {
+        assertEquals(0, query(Tables.employees(), "table.Take(0)").getRows().size());
+    }
+
+    @Test
+    void takeRejectsNegativeAndFractional() {
+        assertTrue(failure("table.Take(-1)").getMessage().contains("0 이상의 정수"));
+        assertTrue(failure("table.Take(1.5)").getMessage().contains("0 이상의 정수"));
+    }
+
+    /**
+     * 조기 종료. Tables.large는 짝수 행이 IT이므로 IT 3건을 채우는 데 5행이면 충분하다.
+     * 나머지 9995행은 읽지 않는다.
+     */
+    @Test
+    void takeStopsReadingTheSource() {
+        Queryable q = new Queryable(Tables.large(10_000), false);
+        Table out = ExpressionEngine
+                .evaluateQuery("table.Where(r -> r.Dept == \"IT\").Take(3)", q).toTable();
+
+        assertEquals(3, out.getRows().size());
+        assertEquals(5, q.scannedRows());
+    }
+
+    /** Take가 없으면 전체를 읽는다. 위 테스트의 대조군. */
+    @Test
+    void withoutTakeTheWholeSourceIsRead() {
+        Queryable q = new Queryable(Tables.large(10_000), false);
+        ExpressionEngine.evaluateQuery("table.Where(r -> r.Dept == \"IT\")", q).toTable();
+
+        assertEquals(10_000, q.scannedRows());
+    }
+
+    /** OrderBy는 전체 입력이 있어야 첫 행을 낼 수 있다. 앞선 조기 종료는 여기서 막힌다. */
+    @Test
+    void orderByBlocksEarlyTermination() {
+        Queryable q = new Queryable(Tables.large(10_000), false);
+        Table out = ExpressionEngine
+                .evaluateQuery("table.OrderBy(r -> toNumber(r.Years)).Take(3)", q).toTable();
+
+        assertEquals(3, out.getRows().size());
+        assertEquals(10_000, q.scannedRows());
+    }
+
+    // ---- Skip / First ----
+
+    @Test
+    void skipDropsLeadingRows() {
+        assertEquals(Arrays.asList("Dan", "Eve"), names("table.Skip(3)"));
+    }
+
+    @Test
+    void skipAndTakePage() {
+        assertEquals(Arrays.asList("Bob", "Cho"), names("table.Skip(1).Take(2)"));
+    }
+
+    @Test
+    void skipBeyondInputSizeReturnsNothing() {
+        assertEquals(0, query(Tables.employees(), "table.Skip(99)").getRows().size());
+    }
+
+    @Test
+    void firstReturnsOneRowTable() {
+        Table out = query(Tables.employees(),
+                "table.OrderByDescending(r -> toNumber(r.Salary)).First()");
+        assertEquals(Arrays.asList("Dan"), Tables.column(out, "Name"));
+        assertEquals(4, out.getSchema().size());
+    }
+
+    @Test
+    void firstFailsWhenNothingMatches() {
+        BotCommandException e = failure("table.Where(r -> r.Dept == \"없음\").First()");
+        assertTrue(e.getMessage().contains("조건을 만족하는 행이 없습니다"), e.getMessage());
+    }
+
+    @Test
+    void firstOrDefaultReturnsEmptyTableInstead() {
+        Table out = query(Tables.employees(),
+                "table.Where(r -> r.Dept == \"없음\").FirstOrDefault()");
+        assertEquals(0, out.getRows().size());
+        assertEquals(4, out.getSchema().size());
+    }
+
+    /** First 도 Take 와 같은 조기 종료를 갖는다. */
+    @Test
+    void firstStopsReadingTheSource() {
+        Queryable q = new Queryable(Tables.large(10_000), false);
+        ExpressionEngine.evaluateQuery("table.Where(r -> r.Dept == \"HR\").First()", q).toTable();
+        assertEquals(2, q.scannedRows());
+    }
+
+    // ---- 숫자 종료 연산자 ----
+
+    private static double number(Table source, String chain) {
+        return ExpressionEngine.evaluateNumber(chain, new Queryable(source, false));
+    }
+
+    @Test
+    void countReturnsRowCount() {
+        assertEquals(3.0, number(Tables.employees(), "table.Where(r -> r.Dept == \"IT\").Count()"));
+        assertEquals(5.0, number(Tables.employees(), "table.Count()"));
+    }
+
+    @Test
+    void sumAveragesMinMax() {
+        String salary = "r -> toNumber(r.Salary)";
+        assertEquals(26500.0, number(Tables.employees(), "table.Sum(" + salary + ")"));
+        assertEquals(5300.0, number(Tables.employees(), "table.Average(" + salary + ")"));
+        assertEquals(3900.0, number(Tables.employees(), "table.Min(" + salary + ")"));
+        assertEquals(7300.0, number(Tables.employees(), "table.Max(" + salary + ")"));
+    }
+
+    @Test
+    void aggregatesRunAfterTheChain() {
+        assertEquals(17400.0, number(Tables.employees(),
+                "table.Where(r -> r.Dept == \"IT\").Sum(r -> toNumber(r.Salary))"));
+    }
+
+    /** 빈 결과에서 Sum 은 0, 나머지는 오류다. LINQ와 같다. */
+    @Test
+    void emptyResultAggregates() {
+        String none = "table.Where(r -> r.Dept == \"없음\")";
+        assertEquals(0.0, number(Tables.employees(), none + ".Sum(r -> toNumber(r.Salary))"));
+        for (String op : new String[] {"Average", "Min", "Max"}) {
+            BotCommandException e = assertThrows(BotCommandException.class,
+                    () -> number(Tables.employees(), none + "." + op + "(r -> toNumber(r.Salary))"));
+            assertTrue(e.getMessage().contains("대상 행이 없습니다"), e.getMessage());
+        }
+    }
+
+    @Test
+    void nonNumericAggregateValueIsRejected() {
+        BotCommandException e = assertThrows(BotCommandException.class,
+                () -> number(Tables.employees(), "table.Sum(r -> r.Name)"));
+        assertTrue(e.getMessage().contains("숫자가 아닙니다"), e.getMessage());
+    }
+
+    @Test
+    void tableChainInNumberActionIsRejected() {
+        BotCommandException e = assertThrows(BotCommandException.class,
+                () -> number(Tables.employees(), "table.Where(r -> r.Dept == \"IT\")"));
+        assertTrue(e.getMessage().contains("숫자를 반환해야"), e.getMessage());
+    }
+
+    @Test
+    void numberChainInTableActionIsRejected() {
+        BotCommandException e = failure("table.Count()");
+        assertTrue(e.getMessage().contains("테이블을 반환해야"), e.getMessage());
+    }
+
     // ---- Select ----
 
     @Test

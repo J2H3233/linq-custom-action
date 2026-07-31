@@ -17,10 +17,12 @@ import custompackageexample.core.Queryable;
 import custompackageexample.core.TableGuard;
 
 /**
- * 람다 체인으로 테이블을 질의하는 액션. LINQ 메서드 구문에 대응한다.
+ * 람다 체인으로 테이블을 질의해 테이블을 반환한다. LINQ 메서드 구문에 대응한다.
  *
- * <p>{@link FilterTable}과 달리 체인 전체를 한 액션이 받는다. 중간 결과가 테이블로
- * 실체화되지 않으므로 {@code Take} / {@code First} 같은 조기 종료 연산을 추가할 수 있다.
+ * <p>{@link FilterToTable}과 달리 체인 전체를 한 액션이 받는다. 중간 결과가 테이블로
+ * 실체화되지 않으므로 {@code Take} / {@code First}가 원본 읽기를 중단할 수 있다.
+ *
+ * <p>숫자를 반환하는 종료 연산자는 {@link QueryToNumber}가 담당한다.
  */
 @BotCommand
 @CommandPkg(
@@ -33,7 +35,7 @@ import custompackageexample.core.TableGuard;
         return_type = DataType.TABLE,
         return_required = true
 )
-public class QueryTable {
+public class QueryToTable {
 
     /**
      * 표현식 입력창 아래에 표시되는 안내문.
@@ -47,8 +49,14 @@ public class QueryTable {
                     + ".OrderByDescending(r -> toNumber(r.age))"
                     + ".Select([\"name\", \"age\"], r -> [r.name, toNumber(r.age)])"
                     + "  |  연산자: Where(람다) · OrderBy(람다) · OrderByDescending(람다) · "
-                    + "Select([컬럼명 목록], 람다). 행 번호는 r._rowIndex 입니다(0부터). "
-                    + "Select 가 컬럼명을 따로 받는 것은 컬럼 순서가 테이블에서 의미를 갖기 때문입니다."
+                    + "Select([컬럼명 목록], 람다) · Take(개수) · Skip(개수) · First() · FirstOrDefault(). "
+                    + "행 번호는 r._rowIndex 입니다(0부터). "
+                    + "Select 가 컬럼명을 따로 받는 것은 컬럼 순서가 테이블에서 의미를 갖기 때문입니다. "
+                    + "First 는 1행짜리 테이블을 돌려주며 0건이면 오류입니다. 0건을 허용하려면 "
+                    + "FirstOrDefault 를 쓰십시오. "
+                    + "Take 는 개수를 채우면 원본 읽기를 중단합니다. 단 앞에 OrderBy 가 있으면 "
+                    + "정렬에 전체 입력이 필요하므로 중단되지 않습니다. "
+                    + "숫자 결과가 필요하면 LinqTable: Number 액션을 쓰십시오."
                     + "  |  " + Fn.FUNCTION_HELP
                     + "  |  " + TableGuard.HEADER_HINT;
 
@@ -61,7 +69,7 @@ public class QueryTable {
 
             @Idx(index = "2", type = AttributeType.TEXTAREA)
             @Pkg(label = "Query", default_value_type = DataType.STRING,
-                    description = "예: table.Where(r -> r.Dept == \"IT\").OrderBy(r -> toNumber(r.Age))")
+                    description = "예: table.Where(r -> r.dept == \"부서1\").OrderBy(r -> toNumber(r.age))")
             @NotEmpty
             String query,
 

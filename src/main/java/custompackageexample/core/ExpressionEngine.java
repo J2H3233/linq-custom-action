@@ -152,12 +152,36 @@ public final class ExpressionEngine {
      * @throws BotCommandException 문법 오류, 평가 실패, 결과가 {@link Queryable}이 아닌 경우
      */
     public static Queryable evaluateQuery(String source, Queryable table) {
+        Object result = evaluate(source, table);
+        if (!(result instanceof Queryable)) {
+            throw new BotCommandException("쿼리는 테이블을 반환해야 합니다. 실제: "
+                    + describe(result) + ". " + QUERY_VAR + " 로 시작하는 체인을 쓰십시오. 예: "
+                    + QUERY_VAR + ".Where(r -> r.Dept == \"IT\")");
+        }
+        return (Queryable) result;
+    }
+
+    /**
+     * 숫자를 반환하는 체인을 평가한다.
+     *
+     * @throws BotCommandException 문법 오류, 평가 실패, 결과가 숫자가 아닌 경우
+     */
+    public static Double evaluateNumber(String source, Queryable table) {
+        Object result = evaluate(source, table);
+        if (!(result instanceof Number)) {
+            throw new BotCommandException("쿼리는 숫자를 반환해야 합니다. 실제: "
+                    + describe(result) + ". Count / Sum / Average / Min / Max 로 끝내십시오. 예: "
+                    + QUERY_VAR + ".Where(r -> r.Dept == \"IT\").Count()");
+        }
+        return ((Number) result).doubleValue();
+    }
+
+    private static Object evaluate(String source, Queryable table) {
         JexlExpression compiled = compile(source);
         JexlContext context = new MapContext();
         context.set(QUERY_VAR, table);
-        Object result;
         try {
-            result = compiled.evaluate(context);
+            return compiled.evaluate(context);
         } catch (RuntimeException e) {
             // Queryable이 던진 예외는 연산 순번과 행 번호를 이미 포함한다. JEXL이 이를
             // 감싸므로 catch 타입으로는 구분되지 않는다. 원인 사슬에서 꺼내 그대로 던진다.
@@ -167,13 +191,10 @@ public final class ExpressionEngine {
             }
             throw new BotCommandException("쿼리 평가 실패 [" + source + "]: " + rootCause(e));
         }
-        if (!(result instanceof Queryable)) {
-            throw new BotCommandException("쿼리는 테이블을 반환해야 합니다. 실제: "
-                    + (result == null ? "null" : result.getClass().getSimpleName())
-                    + ". " + QUERY_VAR + " 로 시작하는 체인을 쓰십시오. 예: "
-                    + QUERY_VAR + ".Where(r -> r.Dept == \"IT\")");
-        }
-        return (Queryable) result;
+    }
+
+    private static String describe(Object result) {
+        return result == null ? "null" : result.getClass().getSimpleName();
     }
 
     /** 파싱 횟수. 테스트 전용. */

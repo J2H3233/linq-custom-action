@@ -17,9 +17,9 @@ import custompackageexample.core.TableGuard;
 import custompackageexample.core.TableOps;
 
 /**
- * 조건식으로 테이블 행을 걸러내는 액션. LINQ {@code Where}에 대응한다.
+ * 조건식 하나로 테이블 행을 걸러낸다. LINQ {@code Where}에 대응한다.
  *
- * <p>컬럼명을 자유 변수로 참조한다. 람다와 체이닝은 {@link QueryTable}이 담당한다.
+ * <p>컬럼명을 자유 변수로 참조한다. 람다와 체이닝은 {@link QueryToTable}이 담당한다.
  *
  * <p>core를 호출하는 어댑터다. 상속을 쓰지 않는 것은 SDK가 리플렉션으로
  * {@code @Execute}와 파라미터 어노테이션을 스캔하는데, 상속 계층 탐색 동작이
@@ -36,7 +36,7 @@ import custompackageexample.core.TableOps;
         return_type = DataType.TABLE,
         return_required = true
 )
-public class FilterTable {
+public class FilterToTable {
 
     @Execute
     public TableValue action(
