@@ -44,6 +44,8 @@ final class Tables {
         return of(names, rows);
     }
 
+    // SDK의 Row 생성자가 raw List<Value>를 받는다. List<Value<?>>는 넘길 수 없다.
+    @SuppressWarnings("rawtypes")
     static Row row(String... cells) {
         List<Value> values = new ArrayList<>();
         for (String cell : cells) {

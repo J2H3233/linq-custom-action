@@ -112,6 +112,8 @@ class EdgeCaseTest {
         assertTrue(e.getMessage().contains("표현식 문법 오류"), e.getMessage());
     }
 
+    // SDK의 Row 생성자가 raw List<Value>를 받는다. Tables.row()와 같은 제약.
+    @SuppressWarnings("rawtypes")
     private static Table withNullDept() {
         List<Value> cells = new ArrayList<>();
         cells.add(new StringValue("Ann"));

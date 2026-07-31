@@ -88,6 +88,9 @@ public final class RowEvaluator {
      * 컬럼명 → 값. 열에는 이름이 있고 행에는 없다는 비대칭 때문에
      * 행 번호만 {@code _rowIndex}로 따로 넣는다.
      */
+    // SDK의 Row.getValues()가 raw List<Value>를 반환한다. Value<T>는 제네릭이지만
+    // List<Value<?>>로 받으면 타입이 안 맞는다. SDK 시그니처를 따라갈 수밖에 없다.
+    @SuppressWarnings("rawtypes")
     private MapContext contextFor(Row row, int rowIndex) {
         MapContext context = new MapContext();
         List<Value> values = row.getValues();
