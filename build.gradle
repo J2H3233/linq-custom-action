@@ -6,7 +6,7 @@ buildscript {
 		}
 		dependencies {
 			classpath name:'package-compileonly-sdk', version: '1.7.0'
-			classpath "gradle.plugin.com.github.johnrengelman:shadow:7.1.1"
+			classpath "com.github.johnrengelman:shadow:8.1.1"
 		}
 	}
 }
@@ -23,9 +23,9 @@ configure(allprojects){
 	ext {
 		groupName = 'com.automationanywhere'
 		jnaVersion = '5.3.1'
-		version '2.11.0'
 	}
-	group "$groupName"
+	version = '2.11.0'
+	group = "$groupName"
 
 	// SDK 1.7.0 코드젠(BotCommandAnnotationProcessor)은 JDK 21의 AnnotationProxyMaker와
 	// 맞지 않아 multiple_returns()에서 AnnotationTypeMismatch로 죽는다.
@@ -75,13 +75,14 @@ configure(allprojects){
 	commandCodeGen.doFirst {
 		copy {
 			from "$projectDir/src/main/resources/package.template"
-			into "$buildDir/resources/main"
+			into layout.buildDirectory.dir("resources/main")
 		}
 	}
 
 	shadowJar {
 		archiveBaseName = project.name
-		classifier = null
+		// Gradle 8에서 classifier 속성이 제거됐다. 빈 문자열이라야 -all 접미사가 안 붙는다.
+		archiveClassifier = ''
 		mergeServiceFiles('META-INF/spring.*')
 		zip64 = true
 		exclude 'META-INF/MANIFEST.MF'
@@ -100,7 +101,7 @@ configure(allprojects){
 		useJUnitPlatform()
 		testLogging {
 			events 'passed', 'skipped', 'failed'
-			exceptionFormat 'full'
+			exceptionFormat = 'full'
 		}
 	}
 

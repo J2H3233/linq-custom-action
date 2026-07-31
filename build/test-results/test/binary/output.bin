@@ -1,63 +1,0 @@
-### allow() matrix
-6   RESTRICTED Fn.toNumber -> class=true method=false
-5   RESTRICTED Fn.isEmpty -> class=true method=false
-7   RESTRICTED String.length -> class=true method=true
-;   RESTRICTED String.startsWith -> class=true method=true
-9   RESTRICTED Object.getClass -> class=true method=true
-7   UNRESTRICTED Fn.toNumber -> class=true method=true
-;   UNRESTRICTED Object.getClass -> class=true method=true
-<   DENYGETCLASS Object.getClass -> class=true method=false
-8   DENYGETCLASS Fn.toNumber -> class=true method=false
-### eval matrix
-### UNRESTRICTED + null ns
-)   toNumber(Years) > 3  ==>  OK -> true
-.   eqIgnoreCase(Dept, "it")  ==>  OK -> true
-5   ''.getClass()  ==>  OK -> class java.lang.String
-7   Dept.getClass().getName() == "x"  ==>  OK -> false
-'   Dept.length() > 1  ==>  OK -> true
-"   Dept == "IT"  ==>  OK -> true
-### DENYGETCLASS + null ns
-‰   toNumber(Years) > 3  ==>  BLOCKED custompackageexample.core.Probe2Test.evalWith:71@1:9 unsolvable function/method 'toNumber(String)'
-   eqIgnoreCase(Dept, "it")  ==>  BLOCKED custompackageexample.core.Probe2Test.evalWith:71@1:13 unsolvable function/method 'eqIgnoreCase(Strin
-{   ''.getClass()  ==>  BLOCKED custompackageexample.core.Probe2Test.evalWith:71@1:3 unsolvable function/method 'getClass'
-Ž   Dept.getClass().getName() == "x"  ==>  BLOCKED custompackageexample.core.Probe2Test.evalWith:71@1:5 unsolvable function/method 'getClass'
-'   Dept.length() > 1  ==>  OK -> true
-"   Dept == "IT"  ==>  OK -> true
-+### A. no permissions arg, null namespace
-•   toNumber(Years) > 3             BLOCKED(Method) custompackageexample.core.ProbeTest.tryEval:37@1:9 unsolvable function/method 'toNumber(String)'
-¢   eqIgnoreCase(Dept, "it")        BLOCKED(Method) custompackageexample.core.ProbeTest.tryEval:37@1:13 unsolvable function/method 'eqIgnoreCase(String, String)'
-š   fn:toNumber(Years) > 3          BLOCKED(JexlException) custompackageexample.core.ProbeTest.tryEval:37@1:12 JEXL error : no such function namespace fn
-/   Dept.getClass().getName()       OK -> null
-A   ''.getClass()                   OK -> class java.lang.String
-/   Dept == "IT"                    OK -> true
-#### B. RESTRICTED, null namespace
-•   toNumber(Years) > 3             BLOCKED(Method) custompackageexample.core.ProbeTest.tryEval:37@1:9 unsolvable function/method 'toNumber(String)'
-¢   eqIgnoreCase(Dept, "it")        BLOCKED(Method) custompackageexample.core.ProbeTest.tryEval:37@1:13 unsolvable function/method 'eqIgnoreCase(String, String)'
-š   fn:toNumber(Years) > 3          BLOCKED(JexlException) custompackageexample.core.ProbeTest.tryEval:37@1:12 JEXL error : no such function namespace fn
-/   Dept.getClass().getName()       OK -> null
-A   ''.getClass()                   OK -> class java.lang.String
-/   Dept == "IT"                    OK -> true
-6### C. RESTRICTED + allow Fn package, null namespace
-•   toNumber(Years) > 3             BLOCKED(Method) custompackageexample.core.ProbeTest.tryEval:37@1:9 unsolvable function/method 'toNumber(String)'
-¢   eqIgnoreCase(Dept, "it")        BLOCKED(Method) custompackageexample.core.ProbeTest.tryEval:37@1:13 unsolvable function/method 'eqIgnoreCase(String, String)'
-š   fn:toNumber(Years) > 3          BLOCKED(JexlException) custompackageexample.core.ProbeTest.tryEval:37@1:12 JEXL error : no such function namespace fn
-/   Dept.getClass().getName()       OK -> null
-A   ''.getClass()                   OK -> class java.lang.String
-/   Dept == "IT"                    OK -> true
- ### D. named namespace fn only
-•   toNumber(Years) > 3             BLOCKED(Method) custompackageexample.core.ProbeTest.tryEval:37@1:9 unsolvable function/method 'toNumber(String)'
-¢   eqIgnoreCase(Dept, "it")        BLOCKED(Method) custompackageexample.core.ProbeTest.tryEval:37@1:13 unsolvable function/method 'eqIgnoreCase(String, String)'
-–   fn:toNumber(Years) > 3          BLOCKED(Method) custompackageexample.core.ProbeTest.tryEval:37@1:12 unsolvable function/method 'toNumber(String)'
-/   Dept.getClass().getName()       OK -> null
-A   ''.getClass()                   OK -> class java.lang.String
-/   Dept == "IT"                    OK -> true
-=### E. RESTRICTED + deny Object.getClass(), both namespaces
-•   toNumber(Years) > 3             BLOCKED(Method) custompackageexample.core.ProbeTest.tryEval:37@1:9 unsolvable function/method 'toNumber(String)'
-¢   eqIgnoreCase(Dept, "it")        BLOCKED(Method) custompackageexample.core.ProbeTest.tryEval:37@1:13 unsolvable function/method 'eqIgnoreCase(String, String)'
-–   fn:toNumber(Years) > 3          BLOCKED(Method) custompackageexample.core.ProbeTest.tryEval:37@1:12 unsolvable function/method 'toNumber(String)'
-/   Dept.getClass().getName()       OK -> null
-/   ''.getClass()                   OK -> null
-/   Dept == "IT"                    OK -> true
-&### RESTRICTED allows Fn class? true
-*### RESTRICTED allows Fn.toNumber? false
--### RESTRICTED allows Object.getClass? true
