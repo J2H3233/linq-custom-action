@@ -43,11 +43,6 @@ public final class RowEvaluator {
         this.autoDetectNumeric = autoDetectNumeric;
     }
 
-    /** 입력된 원본 표현식. 오류 메시지에 사용한다. */
-    public String source() {
-        return source;
-    }
-
     /** 이 인스턴스의 평가 횟수. */
     public int evaluationCount() {
         return evaluationCount;

@@ -21,8 +21,7 @@ import com.automationanywhere.botcore.api.dto.AttributeType;
 /**
  * 체인 연산의 대상. 표현식에서 {@code table.Where(...).OrderBy(...)} 형태로 호출된다.
  *
- * <p>메서드명이 대문자로 시작하는 것은 자바 관례와 다르다. 이 이름은 자바 API가 아니라
- * 표현식에 직접 입력되는 DSL이며 .NET LINQ와 철자를 맞춘 것이다.
+ * <p>메서드명은 .NET LINQ의 철자를 따른다. 자바 API가 아니라 표현식에 입력되는 DSL이다.
  *
  * <p>액션 하나가 체인 전체를 받으므로 중간 결과를 {@link Table}로 실체화하지 않는다.
  * 연산은 {@code List<Row>} 위에서 이어지고 {@link #toTable()}에서 한 번 테이블이 된다.
@@ -127,11 +126,6 @@ public final class Queryable {
             schema.add(new Schema(columnNames.get(i), typeOf(i)));
         }
         return new Table(schema, rows);
-    }
-
-    /** 적용된 연산 수. 테스트 전용. */
-    public int stepCount() {
-        return step;
     }
 
     // ---- 내부 ----

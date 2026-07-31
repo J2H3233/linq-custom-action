@@ -56,9 +56,4 @@ public final class QueryRow {
         // 스키마보다 셀 수가 적은 행이 들어올 수 있다. 없는 칸은 null이다.
         return i < values.size() ? Coercion.toJava(values.get(i), autoDetectNumeric) : null;
     }
-
-    /** 행 번호. 오류 메시지에 사용한다. */
-    int index() {
-        return rowIndex;
-    }
 }

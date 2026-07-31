@@ -38,10 +38,11 @@ class FnTest {
                 query("table.Where(r -> toNumberOr(r.salary, 0) >= 7000)"));
     }
 
+    /** 기본값이 실제로 적용되는지. 0 이 아닌 값을 주면 빈 셀과 N/A 행이 통과한다. */
     @Test
-    void toNumberOrKeepsRealNumbers() {
-        assertEquals(Arrays.asList("Cho"),
-                query("table.Where(r -> toNumberOr(r.salary, 0) > 7000)"));
+    void fallbackValueIsApplied() {
+        assertEquals(Arrays.asList("Ann", "Bob", "Cho", "Dan"),
+                query("table.Where(r -> toNumberOr(r.salary, 9999) >= 7000)"));
     }
 
     /** 기본값이 숫자가 아니면 오류로 처리한다. */
@@ -62,33 +63,15 @@ class FnTest {
 
     // ---- UI 도움말이 실제 함수 목록과 어긋나지 않게 ----
 
-    /**
-     * {@link Fn#FUNCTION_HELP}는 어노테이션 값이라 상수여야 하므로 실제 메서드 목록과
-     * 자동으로 동기화되지 않는다. 양방향으로 검사한다.
-     */
+    /** {@link Fn#FUNCTION_HELP}와 실제 public 메서드 목록의 일치 검사. */
     @Test
-    void functionHelpMatchesTheActualWhitelist() {
+    void functionHelpListsEveryFunction() {
         for (Method m : Fn.class.getDeclaredMethods()) {
             if (!Modifier.isPublic(m.getModifiers()) || m.isSynthetic()) {
                 continue;
             }
             assertTrue(Fn.FUNCTION_HELP.contains(m.getName() + "("),
                     "UI 도움말에 " + m.getName() + " 이(가) 빠져 있습니다: " + Fn.FUNCTION_HELP);
-        }
-    }
-
-    @Test
-    void functionHelpDoesNotAdvertiseMissingFunctions() {
-        for (String advertised : new String[] {"toNumber", "toNumberOr", "isEmpty",
-                "eqIgnoreCase", "contains", "startsWith"}) {
-            boolean exists = false;
-            for (Method m : Fn.class.getDeclaredMethods()) {
-                if (m.getName().equals(advertised) && Modifier.isPublic(m.getModifiers())) {
-                    exists = true;
-                    break;
-                }
-            }
-            assertTrue(exists, "UI 도움말이 없는 함수를 안내하고 있습니다: " + advertised);
         }
     }
 

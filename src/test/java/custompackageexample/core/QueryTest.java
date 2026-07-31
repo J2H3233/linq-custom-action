@@ -57,10 +57,7 @@ class QueryTest {
         assertEquals(Arrays.asList("Ann", "Dan", "Eve"), Tables.column(out, "Name"));
     }
 
-    /**
-     * 소문자 컬럼명. {@code name} / {@code id}는 자바 getter 이름과 겹칠 수 있어
-     * property 해석 경로가 달라질 여지가 있다.
-     */
+    /** 소문자 컬럼명. {@code name} / {@code id}는 자바 getter 이름과 충돌 가능한 이름이다. */
     @Test
     void lowercaseColumnNamesResolve() {
         Table t = Tables.of(Arrays.asList("dept", "name", "id", "age"),

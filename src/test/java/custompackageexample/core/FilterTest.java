@@ -56,6 +56,9 @@ class FilterTest {
                 filterNames(Tables.employees(), "eqIgnoreCase(Dept, \"hr\")"));
         assertEquals(Arrays.asList("Eve"),
                 filterNames(Tables.employees(), "startsWith(Dept, \"Sal\")"));
+        // 대소문자를 구분한다. "Ann" 은 "an" 을 포함하지 않는다.
+        assertEquals(Arrays.asList("Dan"),
+                filterNames(Tables.employees(), "contains(Name, \"an\")"));
     }
 
     @Test
@@ -113,7 +116,7 @@ class FilterTest {
 
     @Test
     void unknownColumnIsAnErrorNotSilentZeroRows() {
-        // strict(true)가 없으면 컬럼명 오타가 오류 없이 0건으로 나타난다.
+        // strict(true) 검증. 미정의 변수는 예외다.
         assertBlocked("Departmnt == \"IT\"");
     }
 
