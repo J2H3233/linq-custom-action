@@ -1,6 +1,7 @@
 package custompackageexample.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -271,6 +272,68 @@ class QueryTest {
     void numberChainInTableActionIsRejected() {
         BotCommandException e = failure("table.Count()");
         assertTrue(e.getMessage().contains("테이블을 반환해야"), e.getMessage());
+    }
+
+    // ---- Any / All ----
+
+    private static boolean bool(Table source, String chain) {
+        return ExpressionEngine.evaluateBoolean(chain, new Queryable(source, false));
+    }
+
+    @Test
+    void anyWithoutPredicateChecksForRows() {
+        assertTrue(bool(Tables.employees(), "table.Where(r -> r.Dept == \"IT\").Any()"));
+        assertFalse(bool(Tables.employees(), "table.Where(r -> r.Dept == \"없음\").Any()"));
+    }
+
+    @Test
+    void anyWithPredicate() {
+        assertTrue(bool(Tables.employees(), "table.Any(r -> toNumber(r.Years) > 7)"));
+        assertFalse(bool(Tables.employees(), "table.Any(r -> toNumber(r.Years) > 99)"));
+    }
+
+    @Test
+    void allWithPredicate() {
+        assertTrue(bool(Tables.employees(), "table.All(r -> toNumber(r.Salary) > 1000)"));
+        assertFalse(bool(Tables.employees(), "table.All(r -> r.Dept == \"IT\")"));
+    }
+
+    /** 빈 입력에서 Any 는 false, All 은 true 다. LINQ와 같다. */
+    @Test
+    void emptyInputVerdicts() {
+        String none = "table.Where(r -> r.Dept == \"없음\")";
+        assertFalse(bool(Tables.employees(), none + ".Any(r -> true)"));
+        assertTrue(bool(Tables.employees(), none + ".All(r -> false)"));
+    }
+
+    /** Any 는 첫 번째 true 에서 멈춘다. Tables.large 는 짝수 행이 IT 다. */
+    @Test
+    void anyStopsAtFirstMatch() {
+        Queryable q = new Queryable(Tables.large(10_000), false);
+        assertTrue(ExpressionEngine.evaluateBoolean("table.Any(r -> r.Dept == \"HR\")", q));
+        assertEquals(2, q.scannedRows());
+    }
+
+    /** All 은 첫 번째 false 에서 멈춘다. */
+    @Test
+    void allStopsAtFirstViolation() {
+        Queryable q = new Queryable(Tables.large(10_000), false);
+        assertFalse(ExpressionEngine.evaluateBoolean("table.All(r -> r.Dept == \"IT\")", q));
+        assertEquals(2, q.scannedRows());
+    }
+
+    @Test
+    void nonBooleanVerdictIsRejected() {
+        BotCommandException e = assertThrows(BotCommandException.class,
+                () -> bool(Tables.employees(), "table.Any(r -> r.Name)"));
+        assertTrue(e.getMessage().contains("true/false"), e.getMessage());
+    }
+
+    @Test
+    void tableChainInBooleanActionIsRejected() {
+        BotCommandException e = assertThrows(BotCommandException.class,
+                () -> bool(Tables.employees(), "table.Where(r -> r.Dept == \"IT\")"));
+        assertTrue(e.getMessage().contains("true/false를 반환해야"), e.getMessage());
     }
 
     // ---- Select ----

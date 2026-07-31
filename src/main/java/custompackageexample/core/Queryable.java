@@ -184,6 +184,39 @@ public final class Queryable {
         return (double) execute().size();
     }
 
+    /**
+     * 행이 하나라도 있으면 true. LINQ {@code Any}에 대응한다.
+     *
+     * <p>첫 행에서 원본 읽기를 중단한다.
+     */
+    public Boolean Any() {
+        Presence presence = new Presence();
+        run(presence);
+        return presence.found;
+    }
+
+    /**
+     * 조건을 만족하는 행이 하나라도 있으면 true. LINQ {@code Any}에 대응한다.
+     *
+     * <p>첫 번째 true에서 원본 읽기를 중단한다.
+     */
+    public Boolean Any(JexlScript predicate) {
+        Verdict verdict = new Verdict(lambda(predicate, "Any"), true);
+        run(verdict);
+        return verdict.stopped;
+    }
+
+    /**
+     * 모든 행이 조건을 만족하면 true. LINQ {@code All}에 대응한다.
+     *
+     * <p>첫 번째 false에서 원본 읽기를 중단한다. 대상 행이 없으면 true다.
+     */
+    public Boolean All(JexlScript predicate) {
+        Verdict verdict = new Verdict(lambda(predicate, "All"), false);
+        run(verdict);
+        return !verdict.stopped;
+    }
+
     /** 합계. 빈 결과는 0이다. LINQ {@code Sum}에 대응한다. */
     public Double Sum(JexlScript selector) {
         List<Double> values = numbers(selector, "Sum");
@@ -238,9 +271,9 @@ public final class Queryable {
         return new Table(schema, rows);
     }
 
-    private List<Row> execute() {
-        Collector collector = new Collector();
-        Stage head = collector;
+    /** 원본을 종료 단계까지 흘려보낸다. 종료 단계가 false를 반환하면 읽기를 멈춘다. */
+    private void run(Stage terminal) {
+        Stage head = terminal;
         for (int i = stages.size() - 1; i >= 0; i--) {
             head = stages.get(i).create(head);
         }
@@ -252,6 +285,11 @@ public final class Queryable {
             }
         }
         head.end();
+    }
+
+    private List<Row> execute() {
+        Collector collector = new Collector();
+        run(collector);
         if (requireNonEmpty && collector.rows.isEmpty()) {
             throw new BotCommandException("First: 조건을 만족하는 행이 없습니다. "
                     + "0건을 허용하려면 FirstOrDefault() 를 쓰십시오.");
@@ -350,6 +388,56 @@ public final class Queryable {
         @Override
         boolean push(Row row) {
             rows.add(row);
+            return true;
+        }
+    }
+
+    /** 행이 하나라도 도달했는지만 본다. 도달 즉시 중단한다. */
+    private static final class Presence extends Stage {
+
+        boolean found;
+
+        Presence() {
+            super(null);
+        }
+
+        @Override
+        boolean push(Row row) {
+            found = true;
+            return false;
+        }
+    }
+
+    /**
+     * 조건을 평가하다가 {@code stopOn}과 같은 결과가 나오면 중단한다.
+     *
+     * <p>{@code Any}는 true에서, {@code All}은 false에서 멈춘다.
+     */
+    private final class Verdict extends Stage {
+
+        private final Lambda test;
+        private final boolean stopOn;
+
+        boolean stopped;
+
+        private Verdict(Lambda test, boolean stopOn) {
+            super(null);
+            this.test = test;
+            this.stopOn = stopOn;
+        }
+
+        @Override
+        boolean push(Row row) {
+            int index = seen++;
+            Object result = test.eval(row, index);
+            if (!(result instanceof Boolean)) {
+                throw new BotCommandException(test.at(index) + " " + test.op
+                        + " 의 조건은 true/false를 반환해야 합니다. 실제: " + describe(result));
+            }
+            if ((Boolean) result == stopOn) {
+                stopped = true;
+                return false;
+            }
             return true;
         }
     }

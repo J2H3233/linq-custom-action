@@ -17,10 +17,8 @@ public class Fn {
      * 액션 UI에 표시할 함수 목록. 어노테이션 값이라 컴파일 상수여야 한다.
      * 실제 메서드 목록과의 일치는 {@code FnTest}가 검증한다.
      */
-    public static final String FUNCTION_HELP = "사용 가능한 함수: "
-            + "toNumber(값) · toNumberOr(값, 기본값) · isEmpty(값) · eqIgnoreCase(a, b) · "
-            + "contains(문자열, 부분) · startsWith(문자열, 접두어). "
-            + "이 목록에 없는 메서드는 호출할 수 없습니다.";
+    public static final String FUNCTION_HELP = "toNumber() · toNumberOr() · isEmpty() · "
+            + "eqIgnoreCase() · contains() · startsWith()";
 
     /**
      * 숫자 변환. 천 단위 구분자와 앞뒤 공백을 허용한다.

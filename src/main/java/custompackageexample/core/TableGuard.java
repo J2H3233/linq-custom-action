@@ -21,10 +21,8 @@ public final class TableGuard {
 
     /** 액션 UI의 표현식 입력창 아래에 표시되는 안내문. */
     public static final String HEADER_HINT =
-            "컬럼명은 표현식에서 변수로 씁니다 (예: Dept == \"IT\" && toNumber(Years) > 3). "
-                    + "Excel/CSV를 읽을 때 'Contains header' 옵션을 켜지 않으면 컬럼명이 "
-                    + "Column1, Column2... 로 생성되어 표현식에 컬럼명을 쓸 수 없습니다. "
-                    + "행 번호는 _rowIndex 로 참조합니다 (0부터 시작).";
+            "Excel/CSV 읽기에서 'Contains header'를 켜지 않으면 컬럼명이 Column1, Column2... "
+                    + "로 생성되어 컬럼명을 쓸 수 없습니다.";
 
     private TableGuard() {
     }

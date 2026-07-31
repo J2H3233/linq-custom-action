@@ -24,8 +24,8 @@ import custompackageexample.core.TableGuard;
  */
 @BotCommand
 @CommandPkg(
-        name = "linqTableNumber",
-        label = "LinqTable: Number",
+        name = "queryToNumber",
+        label = "LinqTable: Query to Number",
         node_label = "Number from {{table}} : {{query}}",
         description = "람다 체인의 결과를 숫자로 반환합니다 (Count / Sum / Average / Min / Max).",
         icon = "pkg.svg",
@@ -35,23 +35,10 @@ import custompackageexample.core.TableGuard;
 )
 public class QueryToNumber {
 
-    /**
-     * 표현식 입력창 아래에 표시되는 안내문.
-     *
-     * <p>줄바꿈을 넣지 않는다. HELP 설명에 {@code \n}이 포함되면 Control Room이 뒤따르는
-     * 속성을 렌더링하지 않는다. 같은 이유로 HELP 속성도 하나만 둔다. 구분자는 {@code |}.
-     */
-    private static final String NUMBER_HINT =
-            "table 로 시작하는 체인을 쓰고 숫자를 내는 연산자로 끝냅니다. "
-                    + "예: table.Where(r -> r.dept == \"부서1\").Count()"
-                    + "  |  종료 연산자: Count() · Sum(람다) · Average(람다) · Min(람다) · Max(람다). "
-                    + "예: table.Sum(r -> toNumber(r.salary)). "
-                    + "Sum 은 대상 행이 없으면 0, Average / Min / Max 는 오류입니다."
-                    + "  |  중간 연산자: Where(람다) · OrderBy(람다) · OrderByDescending(람다) · "
-                    + "Select([컬럼명 목록], 람다) · Take(개수) · Skip(개수). "
-                    + "행 번호는 r._rowIndex 입니다(0부터)."
-                    + "  |  " + Fn.FUNCTION_HELP
-                    + "  |  " + TableGuard.HEADER_HINT;
+    // 표현식 입력창 아래에 표시되는 함수 목록.
+    private static final String NUMBER_HINT = "Where() · OrderBy() · OrderByDescending() · "
+            + "Select() · Take() · Skip() · Count() · Sum() · Average() · Min() · Max() · "
+            + Fn.FUNCTION_HELP;
 
     @Execute
     public NumberValue action(

@@ -2,8 +2,6 @@ package custompackageexample.core;
 
 import java.lang.reflect.Method;
 import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.jexl3.JexlBuilder;
@@ -18,12 +16,12 @@ import org.apache.commons.jexl3.introspection.JexlPermissions;
 import com.automationanywhere.botcommand.exception.BotCommandException;
 
 /**
- * JEXL 엔진 구성과 컴파일 캐시.
+ * JEXL 엔진 구성과 컴파일.
  *
  * <p>표현식은 Bot Agent 프로세스에서 평가된다. 문법({@link JexlFeatures})과 리플렉션
  * 범위({@link JexlPermissions}) 양쪽을 제한하지 않으면 임의 코드 실행 경로가 된다.
  *
- * <p>캐시는 static이다. SDK가 액션 실행마다 커맨드 클래스를 새로 인스턴스화하므로
+ * <p>엔진은 static이다. SDK가 액션 실행마다 커맨드 클래스를 새로 인스턴스화하므로
  * 인스턴스 필드에 두면 재사용되지 않는다.
  */
 public final class ExpressionEngine {
@@ -31,20 +29,9 @@ public final class ExpressionEngine {
     /** 쿼리 표현식에서 원본 테이블에 바인딩되는 변수명. */
     public static final String QUERY_VAR = "table";
 
-    /** 컴파일 캐시 상한. 초과분은 접근 순서 기준으로 제거된다. */
-    private static final int MAX_CACHE_SIZE = 256;
-
     private static final JexlEngine ENGINE = buildEngine();
 
-    private static final Map<String, JexlExpression> CACHE = Collections.synchronizedMap(
-            new LinkedHashMap<String, JexlExpression>(64, 0.75f, true) {
-                @Override
-                protected boolean removeEldestEntry(Map.Entry<String, JexlExpression> eldest) {
-                    return size() > MAX_CACHE_SIZE;
-                }
-            });
-
-    /** 파싱 횟수. 캐시 동작 검증용. */
+    /** 파싱 횟수. 테스트 전용. */
     private static final AtomicLong COMPILE_COUNT = new AtomicLong();
 
     private ExpressionEngine() {
@@ -69,7 +56,7 @@ public final class ExpressionEngine {
                 .strict(true)             // 미정의 변수는 예외
                 .safe(false)              // null 대상 접근을 null로 넘기지 않는다
                 .silent(false)
-                .cache(0)                 // 캐시는 CACHE가 관리한다
+                .cache(0)
                 .create();
     }
 
@@ -125,25 +112,19 @@ public final class ExpressionEngine {
     }
 
     /**
-     * 표현식을 컴파일한다. 동일한 문자열은 캐시에서 반환한다.
+     * 표현식을 컴파일한다.
      *
      * @throws BotCommandException 문법 오류. 행을 처리하기 전에 발생한다.
      */
     public static JexlExpression compile(String source) {
-        JexlExpression cached = CACHE.get(source);
-        if (cached != null) {
-            return cached;
-        }
-        JexlExpression compiled;
         try {
-            compiled = ENGINE.createExpression(source);
+            JexlExpression compiled = ENGINE.createExpression(source);
             COMPILE_COUNT.incrementAndGet();
+            return compiled;
         } catch (JexlException e) {
             throw new BotCommandException(
                     "표현식 문법 오류 [" + source + "]: " + rootCause(e));
         }
-        CACHE.put(source, compiled);
-        return compiled;
     }
 
     /**
@@ -176,6 +157,21 @@ public final class ExpressionEngine {
         return ((Number) result).doubleValue();
     }
 
+    /**
+     * true/false를 반환하는 체인을 평가한다.
+     *
+     * @throws BotCommandException 문법 오류, 평가 실패, 결과가 true/false가 아닌 경우
+     */
+    public static Boolean evaluateBoolean(String source, Queryable table) {
+        Object result = evaluate(source, table);
+        if (!(result instanceof Boolean)) {
+            throw new BotCommandException("쿼리는 true/false를 반환해야 합니다. 실제: "
+                    + describe(result) + ". Any / All 로 끝내십시오. 예: "
+                    + QUERY_VAR + ".Any(r -> r.Dept == \"IT\")");
+        }
+        return (Boolean) result;
+    }
+
     private static Object evaluate(String source, Queryable table) {
         JexlExpression compiled = compile(source);
         JexlContext context = new MapContext();
@@ -202,9 +198,8 @@ public final class ExpressionEngine {
         return COMPILE_COUNT.get();
     }
 
-    /** 캐시와 카운터 초기화. 테스트 전용. */
+    /** 카운터 초기화. 테스트 전용. */
     public static void resetForTest() {
-        CACHE.clear();
         COMPILE_COUNT.set(0);
     }
 
