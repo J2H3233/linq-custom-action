@@ -21,14 +21,14 @@ import com.automationanywhere.botcore.api.dto.AttributeType;
 /**
  * 체인 연산의 대상. 표현식에서 {@code table.Where(...).OrderBy(...)} 형태로 호출된다.
  *
- * <p>메서드명은 .NET LINQ의 철자를 따른다. 자바 API가 아니라 표현식에 입력되는 DSL이다.
- *
- * <p>연산자 메서드는 단계를 등록만 하고 행을 읽지 않는다. 실행은 {@link #toTable()}에서
- * 한 번 일어나며, 원본의 각 행이 단계 체인을 통과한다. {@code Take}가 목표 개수를 채우면
- * 중단 신호가 위로 전파되어 남은 행은 읽지 않는다.
+ * <p>연산자 메서드는 단계를 등록만 하고 행을 읽지 않는다. 실행은 {@link #toTable()}이나
+ * {@code Count()}/{@code Any()} 같은 종료 연산자에서 한 번 일어나며, 원본의 각 행이 단계
+ * 체인을 통과한다. {@code Take}가 목표 개수를 채우면 중단 신호가 위로 전파되어 남은 행은
+ * 읽지 않는다.
  *
  * <p>{@code OrderBy}는 전체 입력이 있어야 첫 행을 낼 수 있으므로 그 지점에서 버퍼링한다.
- * 앞선 단계의 조기 종료는 여기까지만 유효하다.
+ * 앞선 단계의 조기 종료는 여기까지만 유효하다. {@code ThenBy}는 새 버퍼를 만들지 않고
+ * 바로 앞 정렬에 보조 키를 추가하므로, 정렬 바로 뒤에서만 쓸 수 있다.
  *
  * <p>컬럼 구성은 체인 구축 시점에 확정된다. {@code Select} 뒤의 단계는 새 컬럼명으로
  * 해석되며, 컬럼명 오류는 행을 읽기 전에 드러난다.
@@ -58,8 +58,7 @@ public final class Queryable {
      * 직전에 추가한 정렬의 키 목록. {@code ThenBy}가 여기 덧붙인다.
      *
      * <p>정렬이 아닌 다른 연산자가 추가되면 즉시 {@code null}로 무효화된다. {@code ThenBy}는
-     * 이 값이 {@code null}이면 오류다 — .NET의 {@code IOrderedEnumerable} 타입 제약을
-     * 컴파일 타임 대신 체인 구축 시점에 검사하는 셈이다.
+     * 이 값이 {@code null}이면 체인 구축 시점에 바로 오류를 던진다.
      */
     private SortKeys pendingSort;
 
@@ -113,11 +112,13 @@ public final class Queryable {
     }
 
     /**
-     * 직전 정렬의 동점 항목을 보조 키 오름차순으로 다시 정렬. LINQ {@code ThenBy}에 대응한다.
+     * 직전 정렬의 보조 키. 주 키가 같은 행끼리는 이 키의 오름차순으로 순서가 정해진다.
+     * LINQ {@code ThenBy}에 대응한다.
      *
      * <p>{@code OrderBy}/{@code OrderByDescending}/{@code ThenBy} 바로 뒤에서만 쓸 수 있다.
-     * 중간에 다른 연산자가 끼면 오류다 — 그 연산자가 만든 새 컬럼 구성이나 행 부분집합을
-     * 앞선 정렬 버퍼가 알지 못하기 때문이다.
+     * 중간에 다른 연산자가 끼면 오류다. {@code Select}가 끼면 정렬 버퍼가 옛 컬럼 구성으로
+     * 행을 담고 있어 새 컬럼명과 어긋나고, 그 외의 연산자가 끼면 코드에 쓴 순서와 실제
+     * 실행 순서가 달라져 혼란을 준다.
      *
      * <pre>table.OrderBy(r -&gt; r.Dept).ThenBy(r -&gt; toNumber(r.Age))</pre>
      */
@@ -125,7 +126,10 @@ public final class Queryable {
         return thenBy(key, false);
     }
 
-    /** 직전 정렬의 동점 항목을 보조 키 내림차순으로 다시 정렬. LINQ {@code ThenByDescending}에 대응한다. */
+    /**
+     * 직전 정렬의 보조 키. 주 키가 같은 행끼리는 이 키의 내림차순으로 순서가 정해진다.
+     * LINQ {@code ThenByDescending}에 대응한다.
+     */
     public Queryable ThenByDescending(JexlScript key) {
         return thenBy(key, true);
     }

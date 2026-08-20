@@ -19,7 +19,7 @@ public final class TableOps {
     /**
      * 조건을 만족하는 행만 남긴다.
      *
-     * @param negate true이면 조건을 반전한다. RemoveWhere가 이 값만 다르다.
+     * @param negate true이면 조건을 반전해 만족하지 않는 행만 남긴다.
      */
     public static Table filter(Table source, RowEvaluator evaluator, boolean negate) {
         List<Row> rows = source.getRows();

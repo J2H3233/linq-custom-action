@@ -15,7 +15,7 @@ import com.automationanywhere.botcommand.exception.BotCommandException;
  * 컴파일된 표현식과 스키마로 행을 평가한다. 자유 변수 방식({@link custompackageexample.command.FilterToTable})
  * 전용이며, 람다 방식은 {@link Queryable}이 담당한다.
  *
- * <p>{@link #test}는 Boolean 계약이다. Filter / RemoveWhere / Count / Any가 이를 공유한다.
+ * <p>{@link #test}는 Boolean 계약이다. {@link TableOps#filter}가 이를 통해 조건을 판정한다.
  *
  * <p>인스턴스는 액션 실행 1회에 대응한다. 생성 시점에 컴파일하므로 문법 오류는
  * 첫 행을 읽기 전에 발생한다.
