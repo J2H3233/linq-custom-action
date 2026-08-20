@@ -54,6 +54,15 @@ public final class Queryable {
     /** 원본에서 실제로 읽은 행 수. 조기 종료 검증용. */
     private int scanned;
 
+    /**
+     * 직전에 추가한 정렬의 키 목록. {@code ThenBy}가 여기 덧붙인다.
+     *
+     * <p>정렬이 아닌 다른 연산자가 추가되면 즉시 {@code null}로 무효화된다. {@code ThenBy}는
+     * 이 값이 {@code null}이면 오류다 — .NET의 {@code IOrderedEnumerable} 타입 제약을
+     * 컴파일 타임 대신 체인 구축 시점에 검사하는 셈이다.
+     */
+    private SortKeys pendingSort;
+
     public Queryable(Table source, boolean autoDetectNumeric) {
         this.source = source;
         this.autoDetectNumeric = autoDetectNumeric;
@@ -72,6 +81,7 @@ public final class Queryable {
      * <pre>table.Where(r -&gt; r.Dept == "IT" &amp;&amp; toNumber(r.Age) &gt; 3)</pre>
      */
     public Queryable Where(JexlScript predicate) {
+        pendingSort = null;
         Lambda test = lambda(predicate, "Where");
         stages.add(next -> new Stage(next) {
             @Override
@@ -103,6 +113,24 @@ public final class Queryable {
     }
 
     /**
+     * 직전 정렬의 동점 항목을 보조 키 오름차순으로 다시 정렬. LINQ {@code ThenBy}에 대응한다.
+     *
+     * <p>{@code OrderBy}/{@code OrderByDescending}/{@code ThenBy} 바로 뒤에서만 쓸 수 있다.
+     * 중간에 다른 연산자가 끼면 오류다 — 그 연산자가 만든 새 컬럼 구성이나 행 부분집합을
+     * 앞선 정렬 버퍼가 알지 못하기 때문이다.
+     *
+     * <pre>table.OrderBy(r -&gt; r.Dept).ThenBy(r -&gt; toNumber(r.Age))</pre>
+     */
+    public Queryable ThenBy(JexlScript key) {
+        return thenBy(key, false);
+    }
+
+    /** 직전 정렬의 동점 항목을 보조 키 내림차순으로 다시 정렬. LINQ {@code ThenByDescending}에 대응한다. */
+    public Queryable ThenByDescending(JexlScript key) {
+        return thenBy(key, true);
+    }
+
+    /**
      * 컬럼을 선택·계산해 새 스키마로 바꾼다. LINQ {@code Select}에 대응한다.
      *
      * <pre>table.Select(["Name", "Age"], r -&gt; [r.Name, toNumber(r.Age)])</pre>
@@ -111,6 +139,7 @@ public final class Queryable {
      * {@code HashMap}으로 생성되어 키 순서가 보존되지 않는다.
      */
     public Queryable Select(Object columnNames, JexlScript projection) {
+        pendingSort = null;
         Lambda project = lambda(projection, "Select");
         List<String> produced = namesOf(columnNames);
         stages.add(next -> new Stage(next) {
@@ -144,6 +173,7 @@ public final class Queryable {
      * <pre>table.Skip(10).Take(10)</pre>
      */
     public Queryable Skip(Object n) {
+        pendingSort = null;
         int count = countOf(n, "Skip");
         step++;
         stages.add(next -> new Stage(next) {
@@ -298,6 +328,7 @@ public final class Queryable {
     }
 
     private Queryable limit(int max, String op) {
+        pendingSort = null;
         step++;
         stages.add(next -> new Stage(next) {
             private int taken;
@@ -443,23 +474,22 @@ public final class Queryable {
     }
 
     private Queryable sort(JexlScript key, boolean descending) {
-        Lambda keyOf = lambda(key, descending ? "OrderByDescending" : "OrderBy");
+        SortKeys keys = new SortKeys();
+        keys.add(key, descending, descending ? "OrderByDescending" : "OrderBy");
+        pendingSort = keys;
         stages.add(next -> new Stage(next) {
             private final List<Object[]> buffer = new ArrayList<>();
 
             @Override
             boolean push(Row row) {
-                buffer.add(new Object[] {keyOf.eval(row, seen++), row});
+                buffer.add(new Object[] {keys.evaluate(row, seen++), row});
                 return true;
             }
 
             @Override
             void end() {
                 // List.sort는 안정 정렬이다. LINQ OrderBy와 동일하게 동점 항목의 순서가 유지된다.
-                buffer.sort((a, b) -> {
-                    int c = compare(a[0], b[0]);
-                    return descending ? -c : c;
-                });
+                buffer.sort((a, b) -> keys.compareRows((Object[]) a[0], (Object[]) b[0]));
                 for (Object[] pair : buffer) {
                     if (!next.push((Row) pair[1])) {
                         break;
@@ -469,6 +499,52 @@ public final class Queryable {
             }
         });
         return this;
+    }
+
+    private Queryable thenBy(JexlScript key, boolean descending) {
+        String op = descending ? "ThenByDescending" : "ThenBy";
+        if (pendingSort == null) {
+            throw new BotCommandException(op + "는 OrderBy/OrderByDescending 바로 뒤에서만 "
+                    + "쓸 수 있습니다. 중간에 다른 연산자가 있으면 안 됩니다. 예: "
+                    + "table.OrderBy(r -> r.Dept)." + op + "(r -> toNumber(r.Age))");
+        }
+        pendingSort.add(key, descending, op);
+        return this;
+    }
+
+    /** 정렬 스테이지 하나가 쓰는 키 목록. {@code OrderBy}가 만들고 {@code ThenBy}가 덧붙인다. */
+    private final class SortKeys {
+
+        private final List<Lambda> keys = new ArrayList<>();
+        private final List<Boolean> descendings = new ArrayList<>();
+
+        private void add(JexlScript key, boolean descending, String op) {
+            keys.add(lambda(key, op));
+            descendings.add(descending);
+        }
+
+        /** 한 행에 대해 키를 전부 평가한다. 오름차순/내림차순 방향은 여기 포함되지 않는다. */
+        private Object[] evaluate(Row row, int rowIndex) {
+            Object[] values = new Object[keys.size()];
+            for (int i = 0; i < values.length; i++) {
+                values[i] = keys.get(i).eval(row, rowIndex);
+            }
+            return values;
+        }
+
+        /** 첫 키부터 순서대로 비교하고, 동점이면 다음 키로 넘어간다. */
+        private int compareRows(Object[] a, Object[] b) {
+            for (int i = 0; i < a.length; i++) {
+                int c = compare(a[i], b[i]);
+                if (descendings.get(i)) {
+                    c = -c;
+                }
+                if (c != 0) {
+                    return c;
+                }
+            }
+            return 0;
+        }
     }
 
     // ---- 람다 실행 ----

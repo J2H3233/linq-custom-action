@@ -40,8 +40,8 @@ public class QueryToTable {
 
     // 표현식 입력창 아래에 표시되는 함수 목록.
     private static final String QUERY_HINT = "Where() · OrderBy() · OrderByDescending() · "
-            + "Select() · Take() · Skip() · First() · FirstOrDefault() · "
-            + Fn.FUNCTION_HELP;
+            + "ThenBy() · ThenByDescending() · Select() · Take() · Skip() · First() · "
+            + "FirstOrDefault() · " + Fn.FUNCTION_HELP;
 
     @Execute
     public TableValue action(

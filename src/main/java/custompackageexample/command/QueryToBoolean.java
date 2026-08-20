@@ -37,7 +37,7 @@ public class QueryToBoolean {
 
     // 표현식 입력창 아래에 표시되는 함수 목록.
     private static final String BOOLEAN_HINT = "Where() · OrderBy() · OrderByDescending() · "
-            + "Select() · Take() · Skip() · Any() · All() · "
+            + "ThenBy() · ThenByDescending() · Select() · Take() · Skip() · Any() · All() · "
             + Fn.FUNCTION_HELP;
 
     @Execute

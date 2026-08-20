@@ -37,8 +37,8 @@ public class QueryToNumber {
 
     // 표현식 입력창 아래에 표시되는 함수 목록.
     private static final String NUMBER_HINT = "Where() · OrderBy() · OrderByDescending() · "
-            + "Select() · Take() · Skip() · Count() · Sum() · Average() · Min() · Max() · "
-            + Fn.FUNCTION_HELP;
+            + "ThenBy() · ThenByDescending() · Select() · Take() · Skip() · Count() · Sum() · "
+            + "Average() · Min() · Max() · " + Fn.FUNCTION_HELP;
 
     @Execute
     public NumberValue action(

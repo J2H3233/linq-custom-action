@@ -111,6 +111,29 @@ class QueryTest {
                 Tables.column(query(t, "table.OrderBy(r -> toNumber(r.N))"), "Name"));
     }
 
+    // ---- ThenBy ----
+
+    /** Dept 오름차순이 주키, Salary 내림차순이 보조키. IT 그룹 내부만 Salary로 갈린다. */
+    @Test
+    void thenBySortsByTheSecondaryKeyWithinTiesOfTheFirst() {
+        assertEquals(Arrays.asList("Bob", "Dan", "Ann", "Cho", "Eve"),
+                names("table.OrderBy(r -> r.Dept).ThenByDescending(r -> toNumber(r.Salary))"));
+    }
+
+    @Test
+    void thenByWithoutAPrecedingSortIsRejected() {
+        BotCommandException e = failure("table.Where(r -> r.Dept == \"IT\").ThenBy(r -> r.Name)");
+        assertTrue(e.getMessage().contains("OrderBy/OrderByDescending 바로 뒤에서만"), e.getMessage());
+    }
+
+    /** OrderBy와 ThenBy 사이에 다른 연산자가 끼면 오류다. */
+    @Test
+    void thenByAfterAnUnrelatedOperatorIsRejected() {
+        BotCommandException e = failure(
+                "table.OrderBy(r -> r.Dept).Where(r -> true).ThenBy(r -> toNumber(r.Salary))");
+        assertTrue(e.getMessage().contains("OrderBy/OrderByDescending 바로 뒤에서만"), e.getMessage());
+    }
+
     // ---- Take ----
 
     @Test
