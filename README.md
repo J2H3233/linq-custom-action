@@ -11,12 +11,13 @@
 
 액션은 4개이고, 이름은 `입력 언어 → 출력 타입` 규칙을 따릅니다.
 
-| 액션 | 입력 언어 | 반환 타입 | 역할 |
-|---|---|---|---|
-| `LinqTable: Filter to Table` | 조건식 하나 | TABLE | 검증용 |
-| `LinqTable: Query to Table` | 람다 체인 | TABLE | 본 기능 |
-| `LinqTable: Query to Number` | 람다 체인 | NUMBER | 본 기능 |
-| `LinqTable: Query to Boolean` | 람다 체인 | BOOLEAN | 본 기능 |
+
+| 액션                          | 입력 언어   | 반환 타입 | 역할    |
+| ----------------------------- | ----------- | --------- | ------- |
+| `LinqTable: Filter to Table`  | 조건식 하나 | TABLE     | 검증용  |
+| `LinqTable: Query to Table`   | 람다 체인   | TABLE     | 본 기능 |
+| `LinqTable: Query to Number`  | 람다 체인   | NUMBER    | 본 기능 |
+| `LinqTable: Query to Boolean` | 람다 체인   | BOOLEAN   | 본 기능 |
 
 네 액션 모두 입력은 `Source table` / `Query`(또는 `Condition`) / `Auto-detect numeric columns`로
 동일합니다.
@@ -51,11 +52,12 @@ A360은 액션의 반환 타입을 `@CommandPkg(return_type = ...)`에서 **컴�
 오류가 봇 실행 시점으로 밀립니다. 액션을 셋으로 나누면 **액션을 고르는 순간 반환 타입이 확정**되므로,
 Bot Editor가 대입 대상 변수의 타입을 그 자리에서 검사할 수 있습니다.
 
-| 액션 | 허용되는 종료 연산자 |
-|---|---|
-| Query to Table | 없음(체인 그대로) · `First()` · `FirstOrDefault()` |
-| Query to Number | `Count()` · `Sum(람다)` · `Average(람다)` · `Min(람다)` · `Max(람다)` |
-| Query to Boolean | `Any()` · `Any(람다)` · `All(람다)` |
+
+| 액션             | 허용되는 종료 연산자                                                      |
+| ---------------- | ------------------------------------------------------------------------- |
+| Query to Table   | 없음(체인 그대로) ·`First()` · `FirstOrDefault()`                       |
+| Query to Number  | `Count()` · `Sum(람다)` · `Average(람다)` · `Min(람다)` · `Max(람다)` |
+| Query to Boolean | `Any()` · `Any(람다)` · `All(람다)`                                     |
 
 액션과 종료 연산자가 어긋나면 결과 타입을 검사해서 오류로 알려줍니다.
 `Query to Number`에 `table.Where(...)`를 넣으면
@@ -77,18 +79,28 @@ SDK가 리플렉션으로 `@Execute`와 파라미터 어노테이션을 스캔�
 
 ```java
 TableGuard.requireTable(table, "Source table");
-TableGuard.requireNamedColumns(table);
 TableGuard.requireExpression(query, "Query");
 ```
 
-**왜 여기서 막는가.** 이 셋은 통과시키면 *오류 없이 잘못된 결과*가 나오는 입력입니다.
+**여기서는 표현식을 보기 전에 확정할 수 있는 것만 검사합니다.**
 
-- 스키마가 없으면 표현식에 컬럼명을 쓸 수 없습니다.
-- Excel/CSV를 `Contains header` 없이 읽으면 컬럼명이 `Column1, Column2...`로 생성되고
-  헤더 텍스트가 0번 행 데이터가 됩니다. 이 상태를 그냥 두면 조건이 아무 행에도 맞지 않아
-  **0건이 조용히 반환**됩니다. 원인을 찾기 가장 어려운 실패 유형이라 진입 시점에 거부합니다.
-  단, 일부 컬럼만 `Column\d+`인 경우는 통과시킵니다. 이름 있는 컬럼으로 표현식을 쓸 수 있으니까요.
+- 스키마나 행 정보가 아예 없으면 표현식을 평가할 수 없습니다.
 - 빈 표현식은 JEXL에서 `null`로 평가되어 아무 오류 없이 통과합니다. 그래서 별도로 검사합니다.
+
+**컬럼명은 여기서 보지 않습니다.** 표현식이 어떤 컬럼을 참조하는지는 평가 시점에야
+알 수 있고, 그때 `QueryRow` / `RowEvaluator`가 사용 가능한 컬럼 목록을 붙여 예외를 던집니다.
+
+Excel/CSV를 `Contains header` 없이 읽어 컬럼명이 `Column1, Column2...`가 된 경우도
+같은 경로로 드러납니다.
+
+```
+컬럼 'Dept' 이(가) 테이블에 없습니다.
+사용 가능한 컬럼: [Column1, Column2, Column3, Column4]
+```
+
+컬럼 목록 자체가 헤더를 못 읽었다는 증거입니다. 진입 시점에 `Column\d+` 패턴으로
+차단하는 방식도 써봤지만 제거했습니다 — 이미 위 경로가 잡아내고 있었고,
+`r.Column1`로 위치를 다루려는 정상 사용까지 막았기 때문입니다.
 
 ### (2) 열 이름 감지 — `new Queryable(table, autoDetectNumeric)`
 
@@ -114,14 +126,15 @@ TableGuard.requireExpression(query, "Query");
 
 문법(`JexlFeatures`):
 
-| 설정 | 막는 것 |
-|---|---|
-| `sideEffect(false)` | 대입. `Dept = "IT"`는 파싱에서 거부 |
-| `newInstance(false)` | `new` |
-| `loops(false)` | 반복문 |
-| `script(false)` | 문장 나열·블록. 표현식 하나만 허용 |
-| `lambda(true)` | 람다는 **허용**. `r -> ...`이 필요하므로 |
-| `strict(true)` / `safe(false)` | 미정의 변수와 null 대상 접근을 예외로 |
+
+| 설정                           | 막는 것                                 |
+| ------------------------------ | --------------------------------------- |
+| `sideEffect(false)`            | 대입.`Dept = "IT"`는 파싱에서 거부      |
+| `newInstance(false)`           | `new`                                   |
+| `loops(false)`                 | 반복문                                  |
+| `script(false)`                | 문장 나열·블록. 표현식 하나만 허용     |
+| `lambda(true)`                 | 람다는**허용**. `r -> ...`이 필요하므로 |
+| `strict(true)` / `safe(false)` | 미정의 변수와 null 대상 접근을 예외로   |
 
 리플렉션(`JexlPermissions`): `RESTRICTED`를 기반으로 `java.lang.Object.getClass()`를 추가 차단합니다.
 `RESTRICTED`만으로는 `getClass()`가 통과하는데, 이거 하나면 임의 클래스에 도달할 수 있습니다.
@@ -228,11 +241,12 @@ LINQ 메서드 구문과 같아서, `OrderBy`를 앞에 쓰면 정렬이 먼저 
 
 ### (9) 결과 변환 — 여기서만 셋이 갈라진다
 
-| 액션 | 종료 단계 | 변환 |
-|---|---|---|
-| Query to Table | `Collector` | 모인 행 + 확정된 컬럼명 → 새 `Table` |
-| Query to Number | `Collector` 후 선택자 평가 | `Double` |
-| Query to Boolean | `Presence` / `Verdict` | `Boolean` |
+
+| 액션             | 종료 단계                  | 변환                                 |
+| ---------------- | -------------------------- | ------------------------------------ |
+| Query to Table   | `Collector`                | 모인 행 + 확정된 컬럼명 → 새`Table` |
+| Query to Number  | `Collector` 후 선택자 평가 | `Double`                             |
+| Query to Boolean | `Presence` / `Verdict`     | `Boolean`                            |
 
 `Query to Table`은 스키마를 새로 만듭니다. 컬럼 타입은
 **각 컬럼에서 비어 있지 않은 첫 값의 자바 타입**으로 정합니다(없으면 STRING).
@@ -277,8 +291,18 @@ table.Where(r -> r.dept == "부서1" && toNumber(r.age) > 30)
 ```
 
 JEXL의 `strict(true)`는 컨텍스트 변수에만 걸리고 **property 접근에는 걸리지 않습니다.**
-그냥 두면 오타가 `null`이 되고, 조건식이 전부 false가 되어 **0건이 조용히** 나옵니다.
-그래서 `QueryRow.get()`이 직접 예외를 던집니다. 사용 가능한 컬럼명도 함께 보여줍니다.
+그냥 두면 `r.Dpet` 같은 오타가 `null`이 되고, 조건식이 전부 false가 되어 **0건이 조용히**
+나옵니다. 그래서 `QueryRow.get()`이 직접 예외를 던집니다.
+
+Filter 액션은 컬럼을 컨텍스트 변수로 바인딩하므로 `strict(true)`에 걸려 원래도 예외였지만,
+JEXL 원문은 이랬습니다.
+
+```
+0번 행 평가 실패 [Dept == "IT"]: ...ExpressionEngine.compile:121@1:1 variable 'Dept' is undefined
+```
+
+파서 좌표가 붙고 어떤 컬럼을 쓸 수 있는지도 알려주지 않아, `RowEvaluator`가 이를 잡아
+위와 같은 문구로 바꿉니다. 두 경로의 메시지가 같습니다.
 
 ### 셀 값의 타입
 
@@ -295,14 +319,15 @@ JEXL의 `strict(true)`는 컨텍스트 변수에만 걸리고 **property 접근�
 
 `Fn` 클래스에 있는 것만 호출할 수 있습니다. 이 목록에 없는 메서드는 호출 불가입니다.
 
-| 함수 | 동작 |
-|---|---|
-| `toNumber(값)` | 숫자 변환. 천 단위 구분자·앞뒤 공백 허용. **실패 시 null** |
-| `toNumberOr(값, 기본값)` | 변환 실패 시 기본값 |
-| `isEmpty(값)` | null이거나 공백만이면 true |
-| `eqIgnoreCase(a, b)` | 대소문자 무시 비교 |
-| `contains(문자열, 부분)` | 포함 여부. 대소문자 구분 |
-| `startsWith(문자열, 접두어)` | 시작 여부. 대소문자 구분 |
+
+| 함수                         | 동작                                                       |
+| ---------------------------- | ---------------------------------------------------------- |
+| `toNumber(값)`               | 숫자 변환. 천 단위 구분자·앞뒤 공백 허용.**실패 시 null** |
+| `toNumberOr(값, 기본값)`     | 변환 실패 시 기본값                                        |
+| `isEmpty(값)`                | null이거나 공백만이면 true                                 |
+| `eqIgnoreCase(a, b)`         | 대소문자 무시 비교                                         |
+| `contains(문자열, 부분)`     | 포함 여부. 대소문자 구분                                   |
+| `startsWith(문자열, 접두어)` | 시작 여부. 대소문자 구분                                   |
 
 `toNumber`가 실패하면 `null`이고, strict 산술에서 null 피연산자는 예외입니다.
 즉 **빈 셀 하나가 그 행에서 쿼리를 실패시킵니다.** 미입력과 0을 구분할 필요가 없다면
@@ -312,14 +337,15 @@ JEXL의 `strict(true)`는 컨텍스트 변수에만 걸리고 **property 접근�
 
 **중간 연산자** (세 액션 공통)
 
-| 연산자 | 동작 방식 |
-|---|---|
-| `Where(람다)` | 행별 즉시 판정. 버퍼 없음 |
-| `OrderBy` / `OrderByDescending(람다)` | **버퍼링 후 정렬.** 안정 정렬 |
-| `ThenBy` / `ThenByDescending(람다)` | 직전 정렬에 보조 키 추가. 새 버퍼 없음 |
-| `Select([컬럼명], 람다)` | 행별 즉시 변환. **컬럼 구성 교체** |
-| `Take(n)` | n개를 채우면 상류 중단 |
-| `Skip(n)` | 앞 n개를 세면서 버림 |
+
+| 연산자                                | 동작 방식                              |
+| ------------------------------------- | -------------------------------------- |
+| `Where(람다)`                         | 행별 즉시 판정. 버퍼 없음              |
+| `OrderBy` / `OrderByDescending(람다)` | **버퍼링 후 정렬.** 안정 정렬          |
+| `ThenBy` / `ThenByDescending(람다)`   | 직전 정렬에 보조 키 추가. 새 버퍼 없음 |
+| `Select([컬럼명], 람다)`              | 행별 즉시 변환.**컬럼 구성 교체**      |
+| `Take(n)`                             | n개를 채우면 상류 중단                 |
+| `Skip(n)`                             | 앞 n개를 세면서 버림                   |
 
 정렬 비교 규칙: null이 앞섭니다. 같은 타입은 자연 순서, 타입이 다르면 문자열로 비교합니다.
 안정 정렬이라 동점 행의 원래 순서는 유지됩니다(LINQ와 동일).
@@ -373,13 +399,14 @@ table.OrderBy(r -> toNumber(r.age)).Where(r -> r.dept == "IT")   전부 정렬 �
 
 ### 빈 입력에서의 동작 (LINQ와 동일)
 
-| 연산자 | 결과 |
-|---|---|
-| `Sum` | 0 |
-| `Average` / `Min` / `Max` | 오류 |
-| `First` | 오류 (`FirstOrDefault`는 빈 테이블) |
-| `Any` | false |
-| `All` | true |
+
+| 연산자                    | 결과                                |
+| ------------------------- | ----------------------------------- |
+| `Sum`                     | 0                                   |
+| `Average` / `Min` / `Max` | 오류                                |
+| `First`                   | 오류 (`FirstOrDefault`는 빈 테이블) |
+| `Any`                     | false                               |
+| `All`                     | true                                |
 
 ### 예시
 

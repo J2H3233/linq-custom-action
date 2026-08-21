@@ -68,7 +68,6 @@ public class QueryToTable {
             Boolean autoDetectNumeric) {
 
         TableGuard.requireTable(table, "Source table");
-        TableGuard.requireNamedColumns(table);
         TableGuard.requireExpression(query, "Query");
 
         // 파싱은 1회. 체인의 각 연산이 그 결과를 공유한다.

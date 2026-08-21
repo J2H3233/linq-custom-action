@@ -66,7 +66,6 @@ public class FilterToTable {
             Boolean autoDetectNumeric) {
 
         TableGuard.requireTable(table, "Source table");
-        TableGuard.requireNamedColumns(table);
         TableGuard.requireExpression(condition, "Condition");
 
         // 파싱은 1회. 행 루프 밖이다.

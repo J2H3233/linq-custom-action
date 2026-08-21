@@ -65,7 +65,6 @@ public class QueryToNumber {
             Boolean autoDetectNumeric) {
 
         TableGuard.requireTable(table, "Source table");
-        TableGuard.requireNamedColumns(table);
         TableGuard.requireExpression(query, "Query");
 
         Queryable source = new Queryable(table, Boolean.TRUE.equals(autoDetectNumeric));

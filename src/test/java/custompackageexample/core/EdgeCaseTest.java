@@ -97,7 +97,8 @@ class EdgeCaseTest {
     @Test
     void columnNameIsCaseSensitive() {
         BotCommandException e = failureOf(Tables.employees(), "dept == \"IT\"");
-        assertTrue(e.getMessage().contains("평가 실패"), e.getMessage());
+        assertTrue(e.getMessage().contains("컬럼 'dept'"), e.getMessage());
+        assertTrue(e.getMessage().contains("Dept"), e.getMessage());
     }
 
     /** 공백이 포함된 컬럼명은 표현식에서 쓸 수 없다. JEXL이 식별자 두 개로 파싱한다. */

@@ -79,6 +79,5 @@ class FnTest {
     @Test
     void helpTextsHaveNoNewlines() {
         assertTrue(Fn.FUNCTION_HELP.indexOf('\n') < 0, Fn.FUNCTION_HELP);
-        assertTrue(TableGuard.HEADER_HINT.indexOf('\n') < 0, TableGuard.HEADER_HINT);
     }
 }

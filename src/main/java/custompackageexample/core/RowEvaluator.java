@@ -3,6 +3,7 @@ package custompackageexample.core;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.jexl3.JexlException;
 import org.apache.commons.jexl3.JexlExpression;
 import org.apache.commons.jexl3.MapContext;
 
@@ -73,9 +74,29 @@ public final class RowEvaluator {
         } catch (BotCommandException e) {
             throw e;
         } catch (RuntimeException e) {
+            // 컬럼명 오타는 가장 흔한 실패다. JEXL의 "variable 'X' is undefined"에는 파서 좌표가
+            // 붙고 사용 가능한 컬럼도 알려주지 않는다. QueryRow와 같은 문구로 바꿔 준다.
+            JexlException.Variable undefined = undefinedVariable(e);
+            if (undefined != null) {
+                throw new BotCommandException("컬럼 '" + undefined.getVariable()
+                        + "' 이(가) 테이블에 없습니다. 사용 가능한 컬럼: " + columnNames);
+            }
             throw new BotCommandException(
                     rowIndex + "번 행 평가 실패 [" + source + "]: " + ExpressionEngine.rootCause(e));
         }
+    }
+
+    /** 원인 사슬에서 미정의 변수 예외를 찾는다. 없으면 null. */
+    private static JexlException.Variable undefinedVariable(Throwable t) {
+        Throwable cur = t;
+        while (cur != null) {
+            if (cur instanceof JexlException.Variable
+                    && ((JexlException.Variable) cur).isUndefined()) {
+                return (JexlException.Variable) cur;
+            }
+            cur = cur.getCause() == cur ? null : cur.getCause();
+        }
+        return null;
     }
 
     /** 컬럼명을 값에 바인딩한다. 행 번호는 {@code _rowIndex}로 별도 바인딩한다. */
